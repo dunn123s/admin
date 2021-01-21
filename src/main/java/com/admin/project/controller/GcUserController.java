@@ -74,6 +74,7 @@ public class GcUserController {
     @PostMapping("/upload")
     @ApiOperation("会员头像上传和修改接口")
     public CommonResult upload(MultipartFile file) throws Exception {
+
         return CommonResult.success(gcUserService.upload(file));
     }
 }
