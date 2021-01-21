@@ -298,6 +298,8 @@ public class GcUserServiceImpl extends BaseServiceImpl implements GcUserService 
         // 二分搜索
         long start = System.currentTimeMillis();
         DataBlock block1 = searcher.binarySearch(ip);
-        return  block1.getRegion();
+        String region = block1.getRegion();
+        region = region.replaceAll("\\|", "").replaceAll("0", " ");
+        return  region ;
     }
 }
