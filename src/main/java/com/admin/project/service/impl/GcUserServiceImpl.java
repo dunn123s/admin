@@ -5,17 +5,19 @@ import com.admin.common.util.FileUploadUtils;
 import com.admin.common.util.JwtTokenUtil;
 import com.admin.common.util.RedisUtils;
 import com.admin.project.entity.GcUser;
+import com.admin.project.entity.vo.GcLoginLog;
 import com.admin.project.entity.vo.GcUserDetails;
+import com.admin.project.mapper.GcLoginLogMapper;
 import com.admin.project.mapper.GcUserMapper;
 import com.admin.project.service.GcUserService;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.exceptions.ApiException;
 import lombok.extern.slf4j.Slf4j;
+import org.lionsoul.ip2region.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -23,6 +25,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.annotation.Resource;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -38,8 +42,10 @@ import java.util.regex.Pattern;
 @Service
 public class GcUserServiceImpl extends BaseServiceImpl implements GcUserService {
 
-    @Autowired
+    @Resource
     private GcUserMapper gcUserMapper;
+    @Resource
+    private GcLoginLogMapper gcLoginLogMapper;
 
     @Autowired
     private RedisUtils redisUtils;
@@ -157,6 +163,7 @@ public class GcUserServiceImpl extends BaseServiceImpl implements GcUserService 
     @Override
     public HashMap login(String username, String password) {
         HashMap map = new HashMap<>();
+        GcLoginLog gcLoginLog = new GcLoginLog();
         String login_token = null;
         try {
             UserDetails userDetails = loadUserByUsername(username);
@@ -169,11 +176,46 @@ public class GcUserServiceImpl extends BaseServiceImpl implements GcUserService 
 
             // 入库登录记录表 todo
 
+            gcLoginLog.setUserId(getUserId());
+            gcLoginLog.setUserName(username);
+            gcLoginLog.setCreateTime(new Date());
+//            String ip = HttpKit.getIpAddress().orElse("127.0.0.1");
+            String ip = "122.10.38.137";
+            String address = getAddress(ip);
+            gcLoginLog.setIpAddress(ip);
+            gcLoginLog.setUserAddress(address);
+            gcLoginLog.setSucceed(true);
+
+            gcLoginLogMapper.insert(gcLoginLog);
+
+
             System.out.println("当前登录的会员id:" + getUserId());
             System.out.println("当前登录的会员名称：" + getUsername());
-        } catch (AuthenticationException e) {
-            log.warn("登录异常:{}", e.getMessage());
-            throw new ApiException(e.getMessage());
+        } catch (Exception e) {
+
+            gcLoginLog = new GcLoginLog();
+
+            gcLoginLog.setUserName(username);
+            gcLoginLog.setCreateTime(new Date());
+//            String ip = HttpKit.getIpAddress().orElse("127.0.0.1");
+            String ip = "122.10.38.137";
+            try {
+                String address = getAddress(ip);
+                gcLoginLog.setIpAddress(ip);
+                gcLoginLog.setUserAddress(address);
+
+                gcLoginLog.setSucceed(false);
+                gcLoginLog.setMes(e.getMessage());
+
+                gcLoginLogMapper.insert(gcLoginLog);
+                log.warn("登录异常:{}", e.getMessage());
+                throw new ApiException(e.getMessage());
+            } catch (DbMakerConfigException dbMakerConfigException) {
+                dbMakerConfigException.printStackTrace();
+            } catch (IOException ioException) {
+                ioException.printStackTrace();
+            }
+
         }
         return map;
     }
@@ -237,5 +279,25 @@ public class GcUserServiceImpl extends BaseServiceImpl implements GcUserService 
         String dateStr = format.format(new Date());
         int random = 1000 + (int) (Math.random() * 9000);
         return "IDC" + dateStr + random;
+    }
+    /**
+     * 根据ip获取对应的地址
+     */
+    private String getAddress(String ip) throws DbMakerConfigException, IOException {
+        // 判断是否为IP地址
+        boolean isIpAddress = Util.isIpAddress("12123.34"); // false
+        isIpAddress = Util.isIpAddress(ip); // true
+        // IP地址与long互转
+        long ipLong = Util.ip2long(ip); // 794805406
+        String strIp = Util.long2ip(ipLong); // 47.95.196.158
+        // 根据IP搜索地址信息
+        DbConfig config = new DbConfig();
+        String dbfile = "D:\\data\\ip2region.db"; // 这个文件若没有请到以下地址下载：
+        // https://gitee.com/lionsoul/ip2region/tree/master/data
+        DbSearcher searcher = new DbSearcher(config, dbfile);
+        // 二分搜索
+        long start = System.currentTimeMillis();
+        DataBlock block1 = searcher.binarySearch(ip);
+        return  block1.getRegion();
     }
 }
