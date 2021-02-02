@@ -11,9 +11,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @Slf4j
 @SpringBootApplication
 @MapperScan("com.admin.project.mapper")
-public class adminApplication {
+public class AdminApplication {
     public static void main(String[] args) {
-        SpringApplication.run(adminApplication.class, args);
+        SpringApplication.run(AdminApplication.class, args);
         log.info("启动成功");
     }
 }
