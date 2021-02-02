@@ -41,3 +41,9 @@ secure:
       - /admin/generateCode
       - /admin/register
       - /admin/login
+logging:
+  file:
+    path: /logs/admin
+  level:
+    root: info
+

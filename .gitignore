@@ -13,8 +13,9 @@ bin/
 #idea
 *.iml
 .idea/
-
+application-dev1.yml
 #eclipse
 .settings/
 .classpath
 .project
+/src/main/resources/application-dev1.yml
